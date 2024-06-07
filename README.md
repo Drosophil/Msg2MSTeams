@@ -1,0 +1,1 @@
+This is the simplest script for sending messages to MS Teams channel using webhook stored in enviroment variable. Messages are Quotes and Images from public APIs. The structure of the script intentionally kept as simple as possible for more easy further orchestration.
