@@ -19,9 +19,11 @@ def get_quote():
     except (HTTPError, ConnectionError, TimeoutError) as emsg:
         logger.error(f'Network error: {emsg}')
 
+def get_toad():
+    logger.info('No toads to send yet')
+    return {'status': 404}
 
 def get_image_url(rand_start=1, rand_stop=100):
-    #  response = requests.get('https://yesno.wtf/api')
     image_url = f'https://picsum.photos/400/300/?random={randint(rand_start,rand_stop)}'
     return image_url
 
@@ -39,7 +41,7 @@ def send_message(quote: str, author: str, img_url: str):
         logger.error(f'Network error: {emsg}')
 
 
-def main():
+def daily_quote():
     quote = get_quote()
     image_url = get_image_url()
     if quote["status"] == 200:
@@ -50,11 +52,8 @@ def main():
 
 # script execution entry point
 logging.basicConfig(
-    filename='msg2msteams.log',
-    filemode='a',
     format='%(name)s: %(asctime)s %(levelname)s %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
     level=logging.INFO
 )
 logger = logging.getLogger('msg2msteams')
-main()
