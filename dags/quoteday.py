@@ -1,26 +1,16 @@
-import random
-
 import pendulum
 from airflow import DAG
-# from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
-# from airflow.operators.python import BranchPythonOperator
-# from airflow.utils.trigger_rule import TriggerRule
 
 import msg2teams
 
-def _func():
-    branching_paths = ['choice_0', 'choice_1']
-    return random.choice(branching_paths)
-
-
 with DAG(
-    dag_id='daily_quote_DAG',
-    start_date=pendulum.today(),
-    schedule='0 0 * * *',
-    tags=['daily_quote_try_1']
+    dag_id='send_quote_to_msteams',
+    start_date=pendulum.datetime(2024, 6, 17),
+    schedule='0 11 * * *',
+    tags=['daily_quote_sender']
 ) as dag:
     start_op = PythonOperator(
-        task_id='daily_quote',
+        task_id='send_daily_quote',
         python_callable=msg2teams.daily_quote
     )

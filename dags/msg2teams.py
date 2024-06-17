@@ -24,7 +24,6 @@ def get_toad():
     return {'status': 404}
 
 def get_image_url(rand_start=1, rand_stop=100):
-    #  response = requests.get('https://yesno.wtf/api')
     image_url = f'https://picsum.photos/400/300/?random={randint(rand_start,rand_stop)}'
     return image_url
 
@@ -53,11 +52,8 @@ def daily_quote():
 
 # script execution entry point
 logging.basicConfig(
-#    filename='msg2msteams.log',
-#    filemode='a',
     format='%(name)s: %(asctime)s %(levelname)s %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
     level=logging.INFO
 )
 logger = logging.getLogger('msg2msteams')
-# daily_quote()
