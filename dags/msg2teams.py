@@ -6,6 +6,7 @@ import pymsteams
 import requests
 from requests.exceptions import HTTPError, ConnectionError
 
+from data2aws import ImageSaverToS3
 
 def get_quote():
     try:
@@ -25,6 +26,11 @@ def get_toad():
 
 def get_image_url(rand_start=1, rand_stop=100):
     image_url = f'https://picsum.photos/400/300/?random={randint(rand_start,rand_stop)}'
+    try:
+        response = requests.get(image_url)
+        S3_saver.save_image(response.content)  #  saving the image to S3
+    except (HTTPError, ConnectionError, TimeoutError) as emsg:
+        logger.error(f'HTTP error while fetching the image: {emsg}')
     return image_url
 
 
@@ -57,3 +63,5 @@ logging.basicConfig(
     level=logging.INFO
 )
 logger = logging.getLogger('msg2msteams')
+S3_saver = ImageSaverToS3('<bucket-name>', '<folder-name>')
+
