@@ -2,7 +2,6 @@ import logging
 import os
 import boto3
 import psycopg2
-import requests
 from psycopg2 import sql
 from psycopg2.errors import UniqueViolation
 from datetime import datetime
@@ -75,7 +74,8 @@ class DataLoaderToRDS():
                                 quote VARCHAR,
                                 author VARCHAR,
                                 sending_time VARCHAR,
-                                picture_url VARCHAR
+                                picture_url VARCHAR,
+                                UNIQUE (quote, author)
                                 );
                                 ''')
 
@@ -98,9 +98,15 @@ class DataLoaderToRDS():
                                 picture_url)
                                 VALUES (%s, %s, %s, %s);
                                 ''')
-        with self.db.cursor() as cursor:
-            cursor.execute(insert_query, (quote, author, sending_time, picture_url))
+        try:
+            with self.db.cursor() as cursor:
+                cursor.execute(insert_query, (quote, author, sending_time, picture_url))
+        except UniqueViolation as unv:
+            logger.warning(f'{unv} Duplicate quote: {quote} by {author}')
+            self.db.commit()
+            return False
         self.db.commit()
+        return True
 
 
 class AWSLoader():  #  main class to be called for data management
@@ -114,13 +120,16 @@ class AWSLoader():  #  main class to be called for data management
                           picture_url: str,
                           image,
                           ):
+
         sending_time = datetime.now().strftime('%Y.%m.%d__%H-%M-%S')  #  timestamp for the quote and image name
 
-        self.RDS.insert_data_to_RDS(
-            quote,
-            author,
-            sending_time,
-            picture_url,
-        )
-
-        self.S3.save_image_to_S3(image, sending_time)
+        if not self.RDS.insert_data_to_RDS(
+                quote,
+                author,
+                sending_time,
+                picture_url,
+        ):
+            return False
+        else:
+            self.S3.save_image_to_S3(image, sending_time)
+            return True

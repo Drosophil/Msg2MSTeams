@@ -54,24 +54,34 @@ def send_message(quote: str, author: str, img_url: str):
 
 
 def daily_quote():
+    image = None
     for count in range(10):  # Trying to download image 10 times
         image = get_image()
         if image:
             break
+        else:
+            logger.error(f'No image to send on step {count+1}. Trying again...')
+            sleep(1)  #  wait for some time just in case something wrong with the network or images API
     if image:
-        for count in range(50):  # Trying to receive quote 10 times
+        no_duplicates = False
+        for count in range(10):  # Trying to receive quote 10 times
             quote = get_quote()
-            if (quote["status"] == 200):  # TODO: duplicates check will be here
+            if (quote["status"] == 200) and \
+                    (no_duplicates := aws_loader.load_quote_to_aws(
+                        quote['quote'],
+                        quote['author'],
+                        image["image_url"],
+                        image["image"]
+                    )):
                 logger.info(f'{quote["quote"]}, {quote["author"]}, {image["image_url"]}')
-                #  load quote and image to AWS
-                aws_loader.load_quote_to_aws(quote['quote'], quote['author'], image["image_url"], image["image"])
                 #  send message to MSTeams
                 send_message(quote['quote'], quote['author'], image["image_url"])
                 break
             else:
-                logger.error('No quote to send. Again...')
+                logger.error(f'No quote to send on try {count+1}. Trying again...')
+                sleep(1)  #  wait for some time just in case something wrong with the network or quotes API
                 continue
-        if not (quote["status"] == 200):
+        if not (quote["status"] == 200) or not no_duplicates:
             logger.error('No quote to send. Aborted.')
     else:
         logger.error('Cannot access image. Aborted.')
@@ -79,3 +89,4 @@ def daily_quote():
 # script execution entry point
 
 logger = logging.getLogger('msg2msteams')
+aws_loader = AWSLoader(os.environ['BUCKET_NAME'], os.environ['FOLDER_NAME'])

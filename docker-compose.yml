@@ -54,6 +54,8 @@ x-airflow-common:
     DB_NAME: 'db name'
     DB_USER: 'db user'
     DB_PASSWORD: 'db password'
+    BUCKET_NAME: 'our bucket name'
+    FOLDER_NAME: 'images folder name in the bucket'
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
