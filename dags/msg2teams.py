@@ -1,12 +1,14 @@
 import logging
 import os
 from random import randint
+from time import sleep
 
 import pymsteams
 import requests
 from requests.exceptions import HTTPError, ConnectionError
 
-from data2aws import ImageSaverToS3
+from data2aws import AWSLoader
+import logging_config
 
 def get_quote():
     try:
@@ -24,14 +26,18 @@ def get_toad():
     logger.info('No toads to send yet')
     return {'status': 404}
 
-def get_image_url(rand_start=1, rand_stop=100):
+def get_image(rand_start=1, rand_stop=100):
     image_url = f'https://picsum.photos/400/300/?random={randint(rand_start,rand_stop)}'
     try:
         response = requests.get(image_url)
-        S3_saver.save_image(response.content)  #  saving the image to S3
     except (HTTPError, ConnectionError, TimeoutError) as emsg:
         logger.error(f'HTTP error while fetching the image: {emsg}')
-    return image_url
+        return None
+    else:
+        if response.status_code == 200:
+            return {'image_url': image_url, 'image': response.content}
+        else:
+            return None
 
 
 def send_message(quote: str, author: str, img_url: str):
@@ -48,20 +54,28 @@ def send_message(quote: str, author: str, img_url: str):
 
 
 def daily_quote():
-    quote = get_quote()
-    image_url = get_image_url()
-    if quote["status"] == 200:
-        logger.info(f'{quote["quote"]}, {quote["author"]}, {image_url}')
-        send_message(quote['quote'], quote['author'], image_url)
+    for count in range(10):  # Trying to download image 10 times
+        image = get_image()
+        if image:
+            break
+    if image:
+        for count in range(50):  # Trying to receive quote 10 times
+            quote = get_quote()
+            if (quote["status"] == 200):  # TODO: duplicates check will be here
+                logger.info(f'{quote["quote"]}, {quote["author"]}, {image["image_url"]}')
+                #  load quote and image to AWS
+                aws_loader.load_quote_to_aws(quote['quote'], quote['author'], image["image_url"], image["image"])
+                #  send message to MSTeams
+                send_message(quote['quote'], quote['author'], image["image_url"])
+                break
+            else:
+                logger.error('No quote to send. Again...')
+                continue
+        if not (quote["status"] == 200):
+            logger.error('No quote to send. Aborted.')
     else:
-        logger.error('No quote to send. Aborted.')
+        logger.error('Cannot access image. Aborted.')
 
 # script execution entry point
-logging.basicConfig(
-    format='%(name)s: %(asctime)s %(levelname)s %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    level=logging.INFO
-)
-logger = logging.getLogger('msg2msteams')
-S3_saver = ImageSaverToS3('<bucket-name>', '<folder-name>')
 
+logger = logging.getLogger('msg2msteams')
